@@ -1,0 +1,154 @@
+{\rtf1\ansi\ansicpg1252\deff0\nouicompat\deflang2057{\fonttbl{\f0\fnil\fcharset0 Calibri;}}
+{\colortbl ;\red0\green0\blue255;}
+{\*\generator Riched20 10.0.19041}\viewkind4\uc1 
+\pard\sa200\sl276\slmult1\f0\fs22\lang9 # If you've deployed using the wrong domain, you'll have to run the Uninstalling step,\par
+# because you can't change the Domain after deployment.\par
+matrix_domain: DomainNameHere #use your TLD and not the matrix.YOURDOMAINHERE.TAG\par
+\par
+# The Matrix homeserver software to install.\par
+# See:\par
+#  - `roles/custom/matrix-base/defaults/main.yml` for valid options\par
+#  - the `docs/configuring-playbook-IMPLEMENTATION_NAME.md` documentation page, if one is available for your implementation choice\par
+#\par
+# By default, we use Synapse, because it's the only full-featured Matrix server at the moment.\par
+#\par
+# Note that the homeserver implementation of a server will not be able to be changed without data loss.\par
+matrix_homeserver_implementation: synapse\par
+\par
+# A secret used as a base, for generating various other secrets.\par
+# You can put any string here, but generating a strong one is preferred. You can create one with a command like `pwgen -s 64 1`.\par
+matrix_homeserver_generic_secret_key: ''\par
+\par
+# By default, the playbook manages its own Traefik ({{\field{\*\fldinst{HYPERLINK https://doc.traefik.io/traefik/ }}{\fldrslt{https://doc.traefik.io/traefik/\ul0\cf0}}}}\f0\fs22 ) reverse-proxy server.\par
+# It will retrieve SSL certificates for you on-demand and forward requests to all other components.\par
+# For alternatives, see `docs/configuring-playbook-own-webserver.md`.\par
+\par
+#configuration for local SSL certificates, SSL Certs are placed in /matrix/traefik/ssl, the default config works here, just rename your PEM files, cert.pem and privkey.pem\par
+#also configured for an external reverse proxy, such as caddy, nginx, apache and others, I used caddy here. \par
+matrix_playbook_reverse_proxy_type: playbook-managed-traefik\par
+traefik_config_certificatesResolvers_acme_enabled: false\par
+traefik_ssl_dir_enabled: true\par
+matrix_playbook_ssl_enabled: true\par
+traefik_config_entrypoint_web_secure_enabled: false\par
+traefik_container_web_host_bind_port: '127.0.0.1:81'\par
+traefik_config_entrypoint_web_forwardedHeaders_insecure: true\par
+matrix_playbook_public_matrix_federation_api_traefik_entrypoint_host_bind_port: '127.0.0.1:8449'\par
+matrix_playbook_public_matrix_federation_api_traefik_entrypoint_config_http3_enabled: false\par
+matrix_playbook_public_matrix_federation_api_traefik_entrypoint_config_custom:\par
+  forwardedHeaders:\par
+    insecure: true\par
+   #trustedIPs: [ '127.0.0.1:2019' ]\par
+traefik_provider_configuration_extension_yaml:\par
+  tls:\par
+    certificates:\par
+      - certFile: /ssl/cert.pem\par
+        keyFile: /ssl/privkey.pem\par
+    stores:\par
+      default:\par
+        defaultCertificate:\par
+          certFile: /ssl/cert.pem\par
+          keyFile: /ssl/privkey.pem\par
+# Controls whether container networks will be created with IPv6 support.\par
+#\par
+# If you also have IPv6 support on your server/network and AAAA DNS records pointing to the server,\par
+# enabling this will effectively give you full public IPv6 connectivity (powered by NAT66).\par
+#\par
+# We recommend leaving this enabled even if you don't currently have IPv6 connectivity on your server/network.\par
+# This way, once you eventually get IPv6 connectivity, you won't have to change anything (besides DNS records).\par
+#\par
+# Flipping this setting later on requires manual work (stopping services, deleting and recreating all container networks).\par
+#\par
+# In the future, this setting will likely default to `true`, so if you really want IPv6 disabled, explicitly set this to `false`.\par
+#\par
+# People managing Docker themselves and running an older Docker version will need additional configuration.\par
+#\par
+# Learn more in `docs/configuring-ipv6.md`.\par
+devture_systemd_docker_base_ipv6_enabled: false #can enable if you have a public IPV6 address\par
+\par
+# A Postgres password to use for the superuser Postgres user (called `matrix` by default).\par
+#\par
+# The playbook creates additional Postgres users and databases (one for each enabled service) using this superuser account.\par
+#\par
+# Changing this value subsequently requires manual work.\par
+# The value used here must be shorter than 100 characters, pwgen -1 100 to generate password.\par
+postgres_connection_password: ''\par
+\par
+# By default, we configure coturn's external IP address using the value specified for `ansible_host` in your `inventory/hosts` file.\par
+# If this value is an external IP address, you can skip this section.\par
+#\par
+# If `ansible_host` is not the server's external IP address, you have 2 choices:\par
+# 1. Uncomment the line below, to allow IP address auto-detection to happen (more on this below)\par
+# 2. Uncomment and adjust the line below to specify an IP address manually\par
+#\par
+# By default, auto-detection will be attempted using the `https://ifconfig.co/json` API.\par
+# Default values for this are specified in `matrix_coturn_turn_external_ip_address_auto_detection_*` variables in the coturn role\par
+# (see `roles/custom/matrix-coturn/defaults/main.yml`).\par
+#\par
+# If your server has multiple IP addresses, you may define them in another variable which allows a list of addresses.\par
+# Example: `matrix_coturn_turn_external_ip_addresses: ['1.2.3.4', '4.5.6.7']`\par
+#\par
+# matrix_coturn_turn_external_ip_address: ''\par
+matrix_static_files_container_labels_base_domain_enabled: true #maybe someone can add what this does exactly <3\par
+\par
+#Element Registration#\par
+matrix_synapse_enable_registration: true\par
+matrix_synapse_admin_enabled: true #useful for moderation and clearing rooms, accessible via matrix.yourdomain.tag/synapse-admin\par
+#matrix_synapse_registrations_require_3pid: ['email'] #for setting email as a requirement instead of optional\par
+matrix_registration_admin_secret: "d1b4WKyTnhQ9TBMptbAIOZyhAfvMsmPCMxGlLze7AlKkfCamAk4RZQlHhosbCxfk"\par
+registration_requires_token: true\par
+\par
+#google captcha to prevent bot signup, use V2 captcha and don't set it to invisible#\par
+matrix_synapse_enable_registration_captcha: true\par
+matrix_synapse_recaptcha_public_key: 'your_captcha_key_here'\par
+matrix_synapse_recaptcha_private_key: 'your_captcha_key_here'\par
+\par
+#User Verify#\par
+matrix_user_verification_service_enabled: true #helps with setting default permission levels, users who are not admin get assigned default permission levels\par
+matrix_user_verification_service_uvs_access_token: "" #found in help and about me section of element web app, under the advance option\par
+matrix_user_verification_service_uvs_require_auth: false #this disables the red shield on unverified users, helps with large servers\par
+\par
+#Jitsi Voice#\par
+jitsi_web_config_resolution_width_ideal_and_max:  1920 #Jitsi Web Config ideals for resolutions of webcam display, scales from 144p-4K, measured in pixels rather than 1080P etc  \par
+jitsi_web_config_resolution_height_ideal_and_max: 1080 #consult with the above line for description\par
+jitsi_enabled: true\par
+jitsi_enable_hsts: true #If you want only HTTPS requests and not HTTP, security feature. \par
+jitsi_enable_lobby: true\par
+jitsi_disable_gravatar: false #Disable third party Avatar fetching from an outside server and not your local Matrix\par
+jitsi_hostname: "jitsi.YOURDOMAIN.tag"\par
+jitsi_prosody_max_participants: 64\par
+jitsi_prosody_container_jvb_host_bind_port: 5222\par
+jitsi_web_custom_config_extension: #performance tweaks, channelLastN for how many webcams you want to display on screen at a time\par
+ config.enableLayerSuspension = true;\par
+  config.disableAudioLevels = true;\par
+  config.channelLastN = 8;\par
+matrix_rtc_enabled: true #Important for livekit and jitsi, might be enabled by default but added here to make sure\par
+\par
+#Jitsi Authentication#\par
+jitsi_enable_auth: true #If you want authentication for users and admins\par
+jitsi_prosody_auth_internal_accounts:\par
+#admin sign in for private calls between admin and moderators#\par
+#probably a good idea to change these passwords every so often for security purposes#\par
+  - username: "admin"\par
+    password: "adminpass"\par
+\par
+  - username: "user" #for user privilage instead of admin\par
+    password: "1234"\par
+\par
+#Server Side Themes For Element Client#\par
+matrix_client_element_themes_enabled: true #fetches from a community github, you can add to the github your own themes if you are inclined \par
+\par
+#Rate Limiting#\par
+#helps with bot spam or potential DDOS attacks, messages will be rate limited and send in a slower capacity, doesn't outright stop spam :(.\par
+\par
+matrix_synapse_rc_message:\par
+  per_second: 0.2 # time value for a user sending a message in quick succession. short values work best\par
+  burst_count: 7 #how many times a user is able to send their message in quick succession before the rate limiter kicks into action\par
+\par
+matrix_synapse_rc_registration:\par
+  per_second: 0.17 #rate limiting on the element sign in and sign up page\par
+\par
+#File Upload Size Limit#\par
+\par
+matrix_synapse_max_upload_size_mb: 12 #can be anything from 0-999, to use GB there may be a similar tag you can parse for that, if not 1 GB = 1000 you can scale this to requirements, but beware, values like 999999999, could be prone to an overflow attack depending on how matrix handles these values\par
+}
+ 
